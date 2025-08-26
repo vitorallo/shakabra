@@ -1,0 +1,55 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Gradient Definitions -->
+  <defs>
+    <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#06B6D4;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#10B981;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="glowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#06B6D4;stop-opacity:0.8" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Outer Glow Circle -->
+  <circle cx="60" cy="60" r="55" fill="none" stroke="url(#glowGradient)" stroke-width="2" opacity="0.3"/>
+  
+  <!-- DJ Headphones -->
+  <path d="M30 40 Q30 25 60 25 Q90 25 90 40" fill="none" stroke="url(#primaryGradient)" stroke-width="4" stroke-linecap="round"/>
+  
+  <!-- Left Ear Cup -->
+  <circle cx="30" cy="50" r="12" fill="url(#primaryGradient)" opacity="0.8"/>
+  <circle cx="30" cy="50" r="8" fill="none" stroke="#ffffff" stroke-width="2"/>
+  
+  <!-- Right Ear Cup -->
+  <circle cx="90" cy="50" r="12" fill="url(#primaryGradient)" opacity="0.8"/>
+  <circle cx="90" cy="50" r="8" fill="none" stroke="#ffffff" stroke-width="2"/>
+  
+  <!-- AI Brain/Waveform Pattern -->
+  <g transform="translate(45, 70)">
+    <!-- Waveform bars representing AI processing -->
+    <rect x="0" y="5" width="3" height="15" fill="url(#primaryGradient)" opacity="0.9"/>
+    <rect x="6" y="0" width="3" height="25" fill="url(#primaryGradient)" opacity="0.7"/>
+    <rect x="12" y="8" width="3" height="9" fill="url(#primaryGradient)" opacity="0.9"/>
+    <rect x="18" y="2" width="3" height="21" fill="url(#primaryGradient)" opacity="0.8"/>
+    <rect x="24" y="6" width="3" height="13" fill="url(#primaryGradient)" opacity="0.9"/>
+  </g>
+  
+  <!-- Music Notes -->
+  <g transform="translate(20, 80)">
+    <circle cx="0" cy="0" r="3" fill="#10B981"/>
+    <path d="M3 0 L3 -15 Q8 -15 8 -10 L8 -5" fill="none" stroke="#10B981" stroke-width="2"/>
+  </g>
+  
+  <g transform="translate(100, 75)">
+    <circle cx="0" cy="0" r="2.5" fill="#06B6D4"/>
+    <path d="M2.5 0 L2.5 -12 Q6 -12 6 -8 L6 -4" fill="none" stroke="#06B6D4" stroke-width="1.5"/>
+  </g>
+  
+  <!-- Center DJ Symbol -->
+  <circle cx="60" cy="60" r="20" fill="url(#primaryGradient)" opacity="0.2"/>
+  <circle cx="60" cy="60" r="15" fill="none" stroke="url(#primaryGradient)" stroke-width="2"/>
+  <circle cx="60" cy="60" r="8" fill="url(#primaryGradient)" opacity="0.6"/>
+  <circle cx="60" cy="60" r="3" fill="#ffffff"/>
+</svg>
