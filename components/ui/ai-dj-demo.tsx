@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { NeonButton } from './neon-button'
 import { GlassCard } from './glass-card'
 import { useDJStore, useDJSession, useDJSettings } from '@/stores/dj-store'
-import { usePlaylistAudioFeatures } from '@/hooks/use-audio-features'
+import { usePlaylistAnalysis } from '@/hooks/use-track-analysis'
 import { SpotifyTrack } from '@/lib/spotify'
 import { DJTrack } from '@/lib/ai-mixing/dj-engine'
 import { 
@@ -25,9 +25,10 @@ import {
 interface AIDJDemoProps {
   playlists: SpotifyTrack[]
   className?: string
+  playerState?: any // Spotify player state from useSpotifyPlayer hook
 }
 
-export function AIDJDemo({ playlists, className }: AIDJDemoProps) {
+export function AIDJDemo({ playlists, className, playerState }: AIDJDemoProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [showCompatibilityDetails, setShowCompatibilityDetails] = useState(false)
   
@@ -57,8 +58,8 @@ export function AIDJDemo({ playlists, className }: AIDJDemoProps) {
     toggleAdvancedSettings 
   } = useDJSettings()
 
-  // Audio features hook
-  const { getPlaylistFeatures, progress } = usePlaylistAudioFeatures()
+  // Modern track analysis hook
+  const { analyzePlaylist, progress } = usePlaylistAnalysis()
 
   const handleStartAIMixing = async () => {
     if (playlists.length === 0) {
@@ -74,54 +75,249 @@ export function AIDJDemo({ playlists, className }: AIDJDemoProps) {
         initializeEngine(djSettings)
       }
 
-      // Get audio features for all tracks
+      // Analyze tracks using modern methods (no deprecated APIs)
       const trackIds = playlists.map(track => track.id)
-      const audioFeatures = await getPlaylistFeatures(trackIds)
+      const audioFeatures = await analyzePlaylist(trackIds)
       
       if (audioFeatures.length === 0) {
-        throw new Error('Unable to analyze tracks. Spotify Premium may be required.')
+        throw new Error('Unable to analyze tracks. Please try a different playlist.')
+      }
+
+      // Log analysis results
+      console.log(`Successfully analyzed ${audioFeatures.length} of ${playlists.length} tracks using intelligent estimation`)
+
+      // Create a map of track ID to audio features for proper matching
+      const featuresMap = new Map<string, any>()
+      audioFeatures.forEach(feature => {
+        if (feature && feature.id) {
+          featuresMap.set(feature.id, feature)
+        }
+      })
+
+      // Create DJ tracks only for tracks with valid audio features
+      const djTracks: DJTrack[] = playlists
+        .filter(track => featuresMap.has(track.id))
+        .map(track => ({
+          ...track,
+          audioFeatures: featuresMap.get(track.id)!,
+          playCount: 0,
+          skipCount: 0
+        }))
+
+      if (djTracks.length === 0) {
+        throw new Error('No analyzable tracks found in the playlist. Try a different playlist with standard Spotify tracks.')
       }
 
       // Add tracks to pool with audio features
-      addTracksToPool(playlists, audioFeatures)
+      addTracksToPool(
+        djTracks.map(t => ({ ...t } as SpotifyTrack)),
+        djTracks.map(t => t.audioFeatures)
+      )
 
-      // Create DJ tracks
-      const djTracks: DJTrack[] = playlists.map((track, index) => ({
-        ...track,
-        audioFeatures: audioFeatures[index] || createMockFeatures(), // Fallback for missing features
-        playCount: 0,
-        skipCount: 0
-      })).filter(track => track.audioFeatures) // Remove tracks without features
-
-      // Start AI DJ session
-      await startSession(djTracks.slice(0, 20)) // Start with first 20 tracks
+      // Start AI DJ session with all available tracks
+      await startSession(djTracks)
+      
+      // Auto-play the first track if Spotify player is available
+      const firstTrack = useDJStore.getState().currentTrack
+      if (firstTrack && playerState?.play) {
+        // Play the selected track via Spotify
+        // Pass undefined for contextUri, then array of track URIs
+        const trackUri = `spotify:track:${firstTrack.id}`
+        try {
+          await playerState.play(undefined, [trackUri])
+        } catch (error) {
+          console.log('Could not auto-play track:', error)
+        }
+      }
       
     } catch (error) {
       console.error('Failed to start AI mixing:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to start AI mixing'
+      
+      // Check if it's a Premium-related error
+      if (errorMessage.includes('Premium') || errorMessage.includes('403')) {
+        useDJStore.getState().setError('Spotify Premium is required for AI mixing. The AI engine needs track analysis data to create seamless transitions.')
+      } else {
+        useDJStore.getState().setError(errorMessage)
+      }
     } finally {
       setIsAnalyzing(false)
     }
   }
 
-  const handleNextTrack = async () => {
-    await getNextTrack()
+  const handleMixNext = async () => {
+    try {
+      setIsAnalyzing(true)
+      
+      // Get next track from AI engine
+      const nextTrack = await getNextTrack()
+      
+      if (nextTrack && playerState) {
+        const trackUri = `spotify:track:${nextTrack.id}`
+        
+        // Debug: Log what's available in playerState
+        console.log('🔍 PlayerState contents:', {
+          hasSetVolume: !!playerState.setVolume,
+          hasNextTrack: !!playerState.nextTrack,
+          hasPlay: !!playerState.play,
+          volume: playerState.volume,
+          deviceId: playerState.deviceId,
+          availableMethods: Object.keys(playerState).filter(key => typeof playerState[key] === 'function')
+        })
+        
+        // Get current playback state for crossfading
+        const currentProgress = playerState.progress || 0
+        const currentDuration = playerState.duration || 0
+        const timeRemaining = currentDuration - currentProgress
+        
+        console.log('Starting mix to next track:', nextTrack.name)
+        console.log(`Current track: ${timeRemaining}ms remaining`)
+        
+        // Implement crossfade mixing
+        const crossfadeDuration = (djSettings?.crossfadeDuration || 3) * 1000 // Convert to ms, default 3 seconds
+        const fadeSteps = 20 // More steps for smoother fade
+        const fadeInterval = crossfadeDuration / fadeSteps
+        
+        // Store original volume - convert from player scale (0-1) to API scale (0-100)
+        const playerVolume = playerState.volume || 0.5
+        const originalVolume = playerVolume <= 1 ? playerVolume * 100 : playerVolume // Handle both scales
+        console.log(`Original volume: player=${playerVolume}, API scale=${originalVolume}`)
+        
+        // Add to queue first
+        try {
+          const response = await fetch(`/api/spotify/player/queue?uri=${encodeURIComponent(trackUri)}`, {
+            method: 'POST',
+          })
+          
+          if (response.ok) {
+            console.log('✅ Track successfully queued, starting crossfade')
+            console.log(`Crossfade settings: duration=${crossfadeDuration}ms, steps=${fadeSteps}`)
+            
+            // For Mix Next button, start crossfading immediately
+            // (Auto-mix would wait for the right moment)
+            
+            useDJStore.getState().setError(`🎵 Transitioning to: ${nextTrack.name} (${crossfadeDuration/1000}s fade)`)
+            
+            // Start volume fade out
+            let currentVolume = originalVolume
+            const volumeStep = originalVolume / fadeSteps
+            let stepCount = 0
+            
+            console.log(`Starting fade: originalVolume=${originalVolume}, volumeStep=${volumeStep}`)
+            console.log('⚠️ Note: Spotify does not support true crossfading (playing 2 tracks simultaneously)')
+            console.log('Creating smooth transition with fade-out → switch → fade-in')
+            
+            // Smoother transition approach
+            const fadeOutInterval = setInterval(async () => {
+              stepCount++
+              currentVolume = originalVolume * (1 - (stepCount / fadeSteps))
+              
+              console.log(`Fade out step ${stepCount}/${fadeSteps}: volume=${Math.round(currentVolume)}%`)
+              
+              // Update volume
+              try {
+                if (playerState.setVolume) {
+                  // Player expects 0-1 scale
+                  const playerVolume = currentVolume / 100
+                  await playerState.setVolume(playerVolume)
+                } else {
+                  // Fallback to API call (expects 0-100)
+                  const volumeResponse = await fetch(
+                    `/api/spotify/player/volume?volume=${Math.round(currentVolume)}${playerState.deviceId ? `&device_id=${playerState.deviceId}` : ''}`,
+                    { method: 'PUT' }
+                  )
+                  if (!volumeResponse.ok) {
+                    console.warn('Failed to set volume via API')
+                  }
+                }
+              } catch (error) {
+                console.error('Volume control error:', error)
+              }
+              
+              // When volume is very low (near the end of fade), switch tracks
+              if (stepCount >= fadeSteps - 1) {
+                clearInterval(fadeOutInterval)
+                console.log('🔄 Volume at minimum, switching to next track now')
+                
+                // Switch to next track at very low volume
+                try {
+                  if (playerState.nextTrack) {
+                    await playerState.nextTrack()
+                  } else {
+                    // Fallback to API call
+                    const nextResponse = await fetch(
+                      `/api/spotify/player/next${playerState.deviceId ? `?device_id=${playerState.deviceId}` : ''}`,
+                      { method: 'POST' }
+                    )
+                    if (!nextResponse.ok) {
+                      console.warn('Failed to skip to next track via API')
+                    }
+                  }
+                } catch (error) {
+                  console.error('Next track error:', error)
+                }
+                
+                // Wait a moment for track change to register
+                setTimeout(() => {
+                  console.log('✨ Starting fade in for new track')
+                  // Fade back in
+                  let fadeInStep = 0
+                  const fadeInInterval = setInterval(async () => {
+                    fadeInStep++
+                    const newVolume = originalVolume * (fadeInStep / fadeSteps)
+                    console.log(`Fade in step ${fadeInStep}/${fadeSteps}: volume=${Math.round(newVolume)}%`)
+                    
+                    try {
+                      if (playerState.setVolume) {
+                        // Player expects 0-1 scale
+                        const playerVolume = Math.min(originalVolume, newVolume) / 100
+                        await playerState.setVolume(playerVolume)
+                      } else {
+                        // Fallback to API call (expects 0-100)
+                        const apiVolume = Math.min(originalVolume, Math.round(newVolume))
+                        const volumeResponse = await fetch(
+                          `/api/spotify/player/volume?volume=${apiVolume}${playerState.deviceId ? `&device_id=${playerState.deviceId}` : ''}`,
+                          { method: 'PUT' }
+                        )
+                        if (!volumeResponse.ok) {
+                          console.warn('Failed to set volume via API during fade-in')
+                        }
+                      }
+                    } catch (error) {
+                      console.error('Fade-in volume error:', error)
+                    }
+                    
+                    if (fadeInStep >= fadeSteps) {
+                      clearInterval(fadeInInterval)
+                      console.log('✅ Transition complete!')
+                      useDJStore.getState().clearError()
+                    }
+                  }, fadeInterval)
+                }, 500) // Small delay to ensure track switch is processed
+              }
+            }, fadeInterval)
+            
+          } else {
+            // Fallback: direct transition without crossfade
+            console.log('Queue failed, using direct transition')
+            await playerState.play?.(undefined, [trackUri])
+          }
+        } catch (error) {
+          console.error('Failed to queue track for mixing:', error)
+          // Fallback to direct play
+          await playerState.play?.(undefined, [trackUri])
+        }
+      } else if (!nextTrack) {
+        // No suitable track found
+        useDJStore.getState().setError('No suitable track found for mixing. Try adding more tracks to the pool.')
+      }
+    } catch (error) {
+      console.error('Failed to mix to next track:', error)
+      useDJStore.getState().setError('Failed to select next track')
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
-
-  const createMockFeatures = () => ({
-    acousticness: Math.random(),
-    danceability: Math.random(),
-    energy: Math.random(),
-    instrumentalness: Math.random(),
-    liveness: Math.random(),
-    loudness: -60 + (Math.random() * 60),
-    speechiness: Math.random(),
-    valence: Math.random(),
-    tempo: 60 + (Math.random() * 140),
-    key: Math.floor(Math.random() * 12),
-    mode: Math.round(Math.random()),
-    time_signature: 4,
-    duration_ms: 180000 + (Math.random() * 120000)
-  })
 
   const getEnergyColor = (energy: number) => {
     if (energy >= 0.8) return 'text-hot-pink'
@@ -145,7 +341,7 @@ export function AIDJDemo({ playlists, className }: AIDJDemoProps) {
           AI DJ Engine Demo
         </h2>
         <p className="text-muted-gray max-w-2xl mx-auto">
-          Experience intelligent music mixing with harmonic matching, energy progression, and seamless transitions.
+          Experience intelligent music mixing with advanced track analysis, energy progression, and seamless transitions.
         </p>
       </div>
 
@@ -212,6 +408,50 @@ export function AIDJDemo({ playlists, className }: AIDJDemoProps) {
             </div>
           )}
 
+          {/* Test API Button - for debugging */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mb-4 text-center">
+              <NeonButton
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/spotify/test-premium')
+                    const data = await response.json()
+                    console.log('Premium test result:', data)
+                    if (data.success) {
+                      alert(`Premium status: ${data.user.isPremium ? 'YES' : 'NO'}\nAudio features work: ${data.audioFeaturesWork ? 'YES' : 'NO'}`)
+                    } else {
+                      alert(`Test failed: ${data.error}`)
+                    }
+                  } catch (error) {
+                    console.error('Test failed:', error)
+                  }
+                }}
+              >
+                Test Spotify Premium API
+              </NeonButton>
+              
+              <NeonButton
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/spotify/test-simple')
+                    const data = await response.json()
+                    console.log('Simple test result:', data)
+                    alert(`Simple API Test:\n${JSON.stringify(data, null, 2)}`)
+                  } catch (error) {
+                    console.error('Test failed:', error)
+                  }
+                }}
+                className="ml-2"
+              >
+                Simple API Test
+              </NeonButton>
+            </div>
+          )}
+
           {/* Control Buttons */}
           <div className="flex justify-center space-x-4">
             {!isSessionActive ? (
@@ -229,14 +469,25 @@ export function AIDJDemo({ playlists, className }: AIDJDemoProps) {
             ) : (
               <>
                 <NeonButton
+                  variant="green"
+                  size="md"
+                  onClick={handleMixNext}
+                  disabled={isLoading || isAnalyzing}
+                  loading={isAnalyzing}
+                  icon={<Zap className="w-5 h-5" />}
+                  glow
+                >
+                  Mix Next
+                </NeonButton>
+                <NeonButton
                   variant="blue"
                   size="md"
-                  onClick={handleNextTrack}
-                  disabled={isLoading}
+                  onClick={handleMixNext}
+                  disabled={isLoading || isAnalyzing}
                   loading={isLoading}
                   icon={<SkipForward className="w-5 h-5" />}
                 >
-                  Next Track
+                  Skip Track
                 </NeonButton>
                 <NeonButton
                   variant="outline"
@@ -244,7 +495,7 @@ export function AIDJDemo({ playlists, className }: AIDJDemoProps) {
                   onClick={endSession}
                   icon={<Pause className="w-5 h-5" />}
                 >
-                  Stop Session
+                  Stop Mixing
                 </NeonButton>
               </>
             )}

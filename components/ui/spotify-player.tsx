@@ -51,11 +51,11 @@ interface SpotifyPlayerProps {
 export function SpotifyPlayer({ className, autoConnect = false, playerState }: SpotifyPlayerProps) {
   const { data: session } = useSession() as { data: any }
   const [showSpectrum, setShowSpectrum] = useState(false)
-  const [hasStartedPlayback, setHasStartedPlayback] = useState(false)
   const [isSeeking, setIsSeeking] = useState(false)
   const [seekPosition, setSeekPosition] = useState(0)
   const [isAdjustingVolume, setIsAdjustingVolume] = useState(false)
   const [tempVolume, setTempVolume] = useState(0.5)
+  const [isInPlaybackSession, setIsInPlaybackSession] = useState(false)
   
   // Use props if provided, otherwise use the hook directly
   const localPlayer = useSpotifyPlayer()
@@ -81,26 +81,28 @@ export function SpotifyPlayer({ className, autoConnect = false, playerState }: S
   
   const handleTestPlay = async () => {
     if (session?.accessToken && deviceId) {
-      const success = await testSpotifyPlayback(session.accessToken, deviceId)
-      if (success) {
-        console.log('Test playback initiated')
-      }
+      await testSpotifyPlayback(session.accessToken, deviceId)
     }
   }
 
   // Auto-connect when ready
   useEffect(() => {
-    if (autoConnect && isReady && !isActive) {
+    if (autoConnect && isReady && !deviceId) {
       connect()
     }
-  }, [autoConnect, isReady, isActive, connect])
-
-  // Track when playback has started
+  }, [autoConnect, isReady, deviceId, connect])
+  
+  // Track playback session - once started, stays true until disconnected
   useEffect(() => {
-    if (currentTrack && !hasStartedPlayback) {
-      setHasStartedPlayback(true)
+    if (currentTrack && !isInPlaybackSession) {
+      setIsInPlaybackSession(true)
     }
-  }, [currentTrack, hasStartedPlayback])
+    // Reset only when device disconnects
+    if (!deviceId) {
+      setIsInPlaybackSession(false)
+    }
+  }, [currentTrack, deviceId, isInPlaybackSession])
+
 
   // Sync tempVolume with actual volume
   useEffect(() => {
@@ -142,15 +144,6 @@ export function SpotifyPlayer({ className, autoConnect = false, playerState }: S
     }
   }
 
-  // Debug logging
-  console.log('SpotifyPlayer Component State:', { 
-    isReady, 
-    deviceId, 
-    isActive,
-    error,
-    showLoading: !isReady && !deviceId 
-  })
-  
   // Only show loading state if BOTH isReady is false AND deviceId is not set
   if (!isReady && !deviceId) {
     return (
@@ -247,12 +240,12 @@ export function SpotifyPlayer({ className, autoConnect = false, playerState }: S
           </div>
           <div>
             <p className="text-sm font-orbitron font-bold text-neon-white">
-              {currentTrack ? 'Playing...' : 
+              {isInPlaybackSession ? 'Playing...' : 
                deviceId ? 'Ready to Play' : 
                'Disconnected'}
             </p>
             <p className="text-xs text-muted-gray">
-              {currentTrack ? 'Streaming via Spotify' : 
+              {isInPlaybackSession ? 'Streaming via Spotify' : 
                deviceId ? 'Click a playlist or use Spotify Connect' : 
                'Connect to start'}
             </p>
@@ -428,12 +421,12 @@ export function SpotifyPlayer({ className, autoConnect = false, playerState }: S
         />
 
         <NeonButton
-          variant={isActive && !isPaused ? "purple" : "blue"}
+          variant={currentTrack && !isPaused ? "purple" : "blue"}
           size="lg"
           onClick={togglePlayPause}
           disabled={!currentTrack}
-          glow={isActive && !isPaused}
-          pulse={isActive && !isPaused}
+          glow={currentTrack && !isPaused}
+          pulse={currentTrack && !isPaused}
           className="hover:scale-110 transition-transform"
           title={isPaused ? "Play" : "Pause"}
         >
@@ -488,39 +481,43 @@ export function SpotifyPlayer({ className, autoConnect = false, playerState }: S
 
       {/* Connection Controls */}
       <div className="flex justify-center gap-2 flex-wrap">
-        {isActive ? (
-          <NeonButton
-            variant="outline"
-            size="sm"
-            onClick={disconnect}
-          >
-            Disconnect
-          </NeonButton>
-        ) : deviceId ? (
-          <>
-            <NeonButton
-              variant="green"
-              size="sm"
-              onClick={handleTestPlay}
-              icon={<TestTube className="w-4 h-4" />}
-            >
-              Test Play
-            </NeonButton>
+        {deviceId ? (
+          isInPlaybackSession ? (
+            // When in playback session, show minimal controls
             <NeonButton
               variant="outline"
-              size="sm"
-              onClick={() => window.open('https://open.spotify.com', '_blank')}
-            >
-              Open Spotify App
-            </NeonButton>
-            <NeonButton
-              variant="ghost"
               size="sm"
               onClick={disconnect}
             >
               Disconnect
             </NeonButton>
-          </>
+          ) : (
+            // When connected but not in playback session, show all options
+            <>
+              <NeonButton
+                variant="green"
+                size="sm"
+                onClick={handleTestPlay}
+                icon={<TestTube className="w-4 h-4" />}
+              >
+                Test Play
+              </NeonButton>
+              <NeonButton
+                variant="outline"
+                size="sm"
+                onClick={() => window.open('https://open.spotify.com', '_blank')}
+              >
+                Open Spotify App
+              </NeonButton>
+              <NeonButton
+                variant="ghost"
+                size="sm"
+                onClick={disconnect}
+              >
+                Disconnect
+              </NeonButton>
+            </>
+          )
         ) : (
           <NeonButton
             variant="purple"
@@ -532,8 +529,8 @@ export function SpotifyPlayer({ className, autoConnect = false, playerState }: S
         )}
       </div>
       
-      {/* Spotify Connect Mode Info - Only show when ready but never started playing */}
-      {deviceId && !hasStartedPlayback && (
+      {/* Spotify Connect Mode Info - Only show when ready but not in playback session */}
+      {deviceId && !isInPlaybackSession && (
         <div className="mt-2 p-4 bg-gradient-to-br from-electric-blue/10 via-neon-purple/10 to-acid-green/10 border border-neon-purple/30 rounded-lg backdrop-blur-sm">
           <div className="flex items-center gap-2 mb-2">
             <div className="relative">

@@ -54,11 +54,13 @@ export const usePlaylistStore = create<PlaylistState>()(
         // Avoid duplicate requests
         if (isLoading) return
         
-        // Cache for 5 minutes
+        // Cache for 5 minutes - but allow force refresh
         if (lastFetched && Date.now() - lastFetched < 5 * 60 * 1000) {
+          console.log('Using cached playlists, skipping fetch')
           return
         }
 
+        console.log('Fetching playlists from API...')
         set({ isLoading: true, error: null })
 
         try {
@@ -69,6 +71,7 @@ export const usePlaylistStore = create<PlaylistState>()(
           }
 
           const data = await response.json()
+          console.log('Playlists API response:', data.items?.length || 0, 'playlists')
           
           if (data.error) {
             throw new Error(data.error)
@@ -80,6 +83,7 @@ export const usePlaylistStore = create<PlaylistState>()(
             error: null,
             lastFetched: Date.now()
           })
+          console.log('Playlists stored successfully')
 
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to fetch playlists'

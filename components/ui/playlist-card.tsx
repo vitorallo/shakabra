@@ -12,7 +12,8 @@ import {
   MoreHorizontal, 
   Music,
   Clock,
-  Users
+  Users,
+  Zap
 } from 'lucide-react'
 import { formatNumber } from '@/lib/utils'
 
@@ -43,6 +44,7 @@ export interface PlaylistCardProps {
   showDescription?: boolean
   showStats?: boolean
   onPlay?: (playlist: Playlist) => void
+  onAIMix?: (playlist: Playlist) => void
   onLike?: (playlist: Playlist) => void
   onShare?: (playlist: Playlist) => void
   onMore?: (playlist: Playlist) => void
@@ -59,6 +61,7 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
   showDescription = true,
   showStats = true,
   onPlay,
+  onAIMix,
   onLike,
   onShare,
   onMore,
@@ -280,8 +283,24 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
           
           {/* Play Button Overlay */}
           {showActions && (
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg flex items-center justify-center gap-3">
               <PlayButton />
+              {onAIMix && (
+                <NeonButton
+                  variant="purple"
+                  size={size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onAIMix(playlist)
+                  }}
+                  glow
+                  icon={<Zap className={cn(
+                    size === 'sm' ? 'h-3 w-3' : size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'
+                  )} />}
+                >
+                  AI Mix
+                </NeonButton>
+              )}
             </div>
           )}
 

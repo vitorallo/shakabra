@@ -46,16 +46,20 @@ export function useAudioFeatures(): UseAudioFeaturesReturn {
         const response = await fetch(`/api/spotify/audio-features?ids=${batch.join(',')}`)
         
         if (!response.ok) {
+          // Try to get the error message from the response
+          const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
+          
           if (response.status === 401) {
-            throw new Error('Authentication required. Please log in again.')
+            throw new Error(errorData.error || 'Authentication required. Please log in again.')
           }
           if (response.status === 403) {
-            throw new Error('Spotify Premium required for audio analysis features.')
+            // Use the server's error message which is more accurate
+            throw new Error(errorData.error || 'Access denied to audio features.')
           }
           if (response.status === 429) {
-            throw new Error('Rate limit exceeded. Please try again in a moment.')
+            throw new Error(errorData.error || 'Rate limit exceeded. Please try again in a moment.')
           }
-          throw new Error(`Failed to fetch audio features: ${response.status}`)
+          throw new Error(errorData.error || `Failed to fetch audio features: ${response.status}`)
         }
 
         const data = await response.json()

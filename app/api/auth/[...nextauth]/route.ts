@@ -12,7 +12,8 @@ const SPOTIFY_SCOPES = [
   'user-read-email',
   'user-read-private',
   'streaming',
-  'user-read-recently-played'
+  'user-read-recently-played',
+  'user-read-playback-position'
 ].join(' ')
 
 async function refreshAccessToken(token: any) {

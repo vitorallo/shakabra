@@ -47,6 +47,7 @@ export interface SpotifyTrack {
     spotify: string
   }
   popularity: number
+  available_markets?: string[]
 }
 
 export interface SpotifyAudioFeatures {
@@ -101,8 +102,40 @@ export class SpotifyAPI {
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Spotify API error: ${response.status} - ${error}`)
+      const errorText = await response.text()
+      let errorMessage = ''
+      
+      // Check if error text is empty (Spotify sometimes returns empty 403s)
+      if (!errorText || errorText.trim() === '') {
+        if (response.status === 403) {
+          errorMessage = 'Access forbidden. This might be due to market restrictions or invalid track IDs.'
+        } else {
+          errorMessage = `HTTP ${response.status} with no error details`
+        }
+      } else {
+        try {
+          const errorJson = JSON.parse(errorText)
+          errorMessage = errorJson.error?.message || errorJson.error?.reason || JSON.stringify(errorJson) || errorText
+        } catch {
+          errorMessage = errorText
+        }
+      }
+      
+      console.error(`Spotify API ${endpoint} error:`, response.status, errorMessage)
+      throw new Error(`Spotify API error: ${response.status} - ${errorMessage}`)
+    }
+
+    // Handle 204 No Content responses
+    if (response.status === 204) {
+      return {} as T
+    }
+
+    // Check if response has JSON content
+    const contentType = response.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      // For non-JSON responses (like queue endpoint sometimes returns a string)
+      console.log(`Non-JSON response from ${endpoint}, returning empty object`)
+      return {} as T
     }
 
     return response.json()
@@ -142,8 +175,9 @@ export class SpotifyAPI {
   }
 
   // Tracks
-  async getTrack(id: string): Promise<SpotifyTrack> {
-    return this.request<SpotifyTrack>(`/tracks/${id}`)
+  async getTrack(id: string, market?: string): Promise<SpotifyTrack> {
+    const url = market ? `/tracks/${id}?market=${market}` : `/tracks/${id}`
+    return this.request<SpotifyTrack>(url)
   }
 
   async getTracks(ids: string[]): Promise<{
@@ -271,6 +305,42 @@ export class SpotifyAPI {
     href: string
   }> {
     return this.request(`/me/player/recently-played?limit=${limit}`)
+  }
+
+  // Artists
+  async getArtist(id: string): Promise<{
+    id: string
+    name: string
+    genres: string[]
+    popularity: number
+    followers: { total: number }
+    images: Array<{ url: string; height: number; width: number }>
+  }> {
+    return this.request(`/artists/${id}`)
+  }
+
+  // Recommendations
+  async getRecommendations(params: {
+    seed_artists?: string
+    seed_genres?: string
+    seed_tracks?: string
+    limit?: number
+    [key: string]: any // For target_* parameters
+  }): Promise<{
+    tracks: SpotifyTrack[]
+    seeds: Array<{
+      id: string
+      type: string
+      href: string
+    }>
+  }> {
+    const queryParams = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        queryParams.append(key, String(value))
+      }
+    })
+    return this.request(`/recommendations?${queryParams.toString()}`)
   }
 
   // Search (for finding tracks)

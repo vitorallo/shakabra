@@ -10,27 +10,64 @@ import { PlaylistCard } from '@/components/ui/playlist-card'
 import { GlassCard } from '@/components/ui/glass-card'
 import { AIDJDemo } from '@/components/ui/ai-dj-demo'
 import { SpotifyPlayer } from '@/components/ui/spotify-player'
-import { LogOut, User, Music, RefreshCw, Loader2 } from 'lucide-react'
+import { LogOut, Music, RefreshCw, Loader2 } from 'lucide-react'
 
 export default function HomePage() {
   const { user, isAuthenticated, isLoading, login, logout } = useAuth()
   const { playlists, isLoading: playlistsLoading, error: playlistsError, hasPlaylists, refetchPlaylists } = usePlaylists()
   const playerState = useSpotifyPlayer()
+  
+  // Debug logging
+  console.log('HomePage - isAuthenticated:', isAuthenticated, 'playlists:', playlists.length, 'hasPlaylists:', hasPlaylists)
   const { 
     play, 
-    deviceId, 
-    isReady: playerReady,
-    isActive: playerActive,
-    connect 
+    deviceId,
+    currentTrack
   } = playerState
   
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
+  const [selectedPlaylistTracks, setSelectedPlaylistTracks] = useState<any[]>([])
+  const [isLoadingTracks, setIsLoadingTracks] = useState(false)
+  const [isInPlaybackSession, setIsInPlaybackSession] = useState(false)
   const playerRef = useRef<HTMLDivElement>(null)
+  const aiDemoRef = useRef<HTMLDivElement>(null)
   
+  // Track playback session - once started, stays true until device disconnects
+  useEffect(() => {
+    if (currentTrack && !isInPlaybackSession) {
+      setIsInPlaybackSession(true)
+    }
+    // Reset only when device disconnects
+    if (!deviceId) {
+      setIsInPlaybackSession(false)
+    }
+  }, [currentTrack, deviceId, isInPlaybackSession])
+  
+  // Fetch tracks from a playlist
+  const fetchPlaylistTracks = async (playlistId: string) => {
+    setIsLoadingTracks(true)
+    try {
+      const response = await fetch(`/api/spotify/playlists/${playlistId}/tracks`)
+      if (response.ok) {
+        const data = await response.json()
+        const tracks = data.items?.map((item: any) => item.track).filter((track: any) => track) || []
+        setSelectedPlaylistTracks(tracks)
+        return tracks
+      }
+    } catch (error) {
+      console.error('Failed to fetch playlist tracks:', error)
+    } finally {
+      setIsLoadingTracks(false)
+    }
+    return []
+  }
+
   // Handle playlist play
   const handlePlaylistPlay = async (playlist: any) => {
-    console.log('🎵 Selected playlist:', playlist.name)
     setSelectedPlaylistId(playlist.id)
+    
+    // Fetch tracks for AI mixing
+    await fetchPlaylistTracks(playlist.id)
     
     // Scroll to player
     if (playerRef.current) {
@@ -40,16 +77,25 @@ export default function HomePage() {
     // Only attempt to play if device is ready
     if (deviceId) {
       const playlistUri = `spotify:playlist:${playlist.id}`
-      console.log('▶️ Starting playback for:', playlistUri)
       
       try {
         await play(playlistUri)
-        console.log('✅ Playback started successfully')
       } catch (error) {
-        console.error('❌ Failed to start playback:', error)
+        console.error('Failed to start playback:', error)
       }
-    } else {
-      console.log('⚠️ Player not ready. Please connect first using the player controls below.')
+    }
+  }
+  
+  // Handle AI Mix button - loads tracks and scrolls to AI demo
+  const handleAIMix = async (playlist: any) => {
+    setSelectedPlaylistId(playlist.id)
+    
+    // Fetch tracks for the playlist
+    await fetchPlaylistTracks(playlist.id)
+    
+    // Scroll to AI demo section
+    if (aiDemoRef.current) {
+      aiDemoRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
   }
   
@@ -219,6 +265,7 @@ export default function HomePage() {
                         key={playlist.id}
                         playlist={playlist}
                         onPlay={handlePlaylistPlay}
+                        onAIMix={handleAIMix}
                       />
                     )
                   })}
@@ -262,7 +309,7 @@ export default function HomePage() {
                     <p className="mt-2">Make sure you have Spotify Premium for full functionality.</p>
                   </>
                 )}
-                {playerActive && selectedPlaylistId && (
+                {isInPlaybackSession && selectedPlaylistId && (
                   <div className="mt-4 p-3 bg-acid-green/10 border border-acid-green/30 rounded-lg">
                     <p className="text-acid-green font-medium">🎵 Playlist is playing!</p>
                     <p className="text-xs mt-1 text-muted-gray">
@@ -270,7 +317,7 @@ export default function HomePage() {
                     </p>
                   </div>
                 )}
-                {!playerActive && deviceId && (
+                {!isInPlaybackSession && deviceId && (
                   <div className="mt-4 p-3 bg-neon-purple/10 border border-neon-purple/30 rounded-lg">
                     <p className="text-neon-purple font-medium">📱 Tips:</p>
                     <div className="text-xs mt-2 space-y-1 text-left">
@@ -286,24 +333,55 @@ export default function HomePage() {
 
           {/* AI DJ Demo Section - Only show when authenticated */}
           {isAuthenticated && (
-            <div className="mt-16 w-full max-w-6xl">
-              <AIDJDemo 
-                playlists={playlists.map(p => ({
-                  id: p.id,
-                  name: p.name,
-                  artists: [{ id: 'unknown', name: p.owner.display_name }],
-                  album: {
-                    id: 'unknown',
-                    name: p.name,
-                    images: p.images,
-                    release_date: '2024-01-01'
-                  },
-                  duration_ms: 180000, // Default 3 minutes
-                  preview_url: null,
-                  external_urls: { spotify: `https://open.spotify.com/playlist/${p.id}` },
-                  popularity: 50
-                }))} 
-              />
+            <div ref={aiDemoRef} className="mt-16 w-full max-w-6xl">
+              {selectedPlaylistTracks.length > 0 ? (
+                <>
+                  <div className="text-center mb-4">
+                    <p className="text-muted-gray">
+                      {isLoadingTracks ? 'Loading tracks...' : `${selectedPlaylistTracks.length} tracks loaded from ${playlists.find(p => p.id === selectedPlaylistId)?.name || 'playlist'}`}
+                    </p>
+                  </div>
+                  <AIDJDemo 
+                    playlists={selectedPlaylistTracks}
+                    playerState={playerState} 
+                  />
+                </>
+              ) : (
+                <GlassCard className="p-8 text-center">
+                  <h3 className="text-2xl font-bold font-orbitron text-neon-white mb-4">
+                    AI DJ Mixing Engine
+                  </h3>
+                  <p className="text-muted-gray mb-6">
+                    Select a playlist above and click "AI Mix" to load tracks for intelligent mixing
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-left max-w-2xl mx-auto">
+                    <div className="flex items-start space-x-2">
+                      <span className="text-electric-blue">✓</span>
+                      <span className="text-muted-gray">Tempo matching</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <span className="text-neon-purple">✓</span>
+                      <span className="text-muted-gray">Energy progression</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <span className="text-acid-green">✓</span>
+                      <span className="text-muted-gray">Harmonic mixing</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <span className="text-hot-pink">✓</span>
+                      <span className="text-muted-gray">Genre flow</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <span className="text-electric-blue">✓</span>
+                      <span className="text-muted-gray">Mood transitions</span>
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <span className="text-neon-purple">✓</span>
+                      <span className="text-muted-gray">Smart crossfades</span>
+                    </div>
+                  </div>
+                </GlassCard>
+              )}
             </div>
           )}
 

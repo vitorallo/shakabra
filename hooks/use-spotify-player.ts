@@ -298,13 +298,16 @@ export function useSpotifyPlayer(): UseSpotifyPlayerReturn {
             setIsActive(true)
             
             // Update current state for external components
+            // Don't update isActive here - it causes flickering during transitions
             if (spotifyPlayer && typeof spotifyPlayer.getCurrentState === 'function') {
               spotifyPlayer.getCurrentState().then(currentState => {
+                // Just log for debugging, don't change isActive
                 if (!currentState) {
-                  setIsActive(false)
+                  console.debug('No current state in player_state_changed')
                 }
               }).catch(err => {
-                console.warn('Failed to get current state:', err)
+                // Silently ignore - this is expected during transitions
+                console.debug('getCurrentState during transition:', err)
               })
             }
           })

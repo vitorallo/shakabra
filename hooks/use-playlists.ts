@@ -18,9 +18,12 @@ export function usePlaylists() {
 
   // Auto-fetch playlists when user is authenticated
   useEffect(() => {
+    console.log('usePlaylists effect - isAuthenticated:', isAuthenticated, 'hasSpotifyToken:', hasSpotifyToken)
     if (isAuthenticated && hasSpotifyToken) {
+      console.log('Fetching playlists...')
       fetchPlaylists()
     } else {
+      console.log('Clearing playlists...')
       clearPlaylists()
     }
   }, [isAuthenticated, hasSpotifyToken, fetchPlaylists, clearPlaylists])
