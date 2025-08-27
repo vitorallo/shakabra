@@ -43,6 +43,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" className="dark">
+      <head>
+        {/* Spotify Web Playback SDK will be loaded dynamically by useSpotifyPlayer hook */}
+      </head>
       <body 
         className={`${inter.variable} ${orbitron.variable} ${jetbrainsMono.variable} font-inter antialiased`}
       >

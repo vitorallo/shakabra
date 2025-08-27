@@ -6,6 +6,7 @@ import { GlassCard } from './glass-card'
 import { NeonButton } from './neon-button'
 import { 
   Play, 
+  Pause,
   Heart, 
   Share2, 
   MoreHorizontal, 
@@ -64,6 +65,12 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
   isPlaying = false,
   loading = false
 }) => {
+  const handlePlayPlaylist = async () => {
+    if (onPlay) {
+      onPlay(playlist)
+    }
+  }
+
   const formatDuration = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
@@ -107,14 +114,19 @@ const PlaylistCard: React.FC<PlaylistCardProps> = ({
     <NeonButton
       variant="blue"
       size={size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md'}
-      onClick={() => onPlay?.(playlist)}
+      onClick={handlePlayPlaylist}
       disabled={loading}
       loading={loading}
       glow
       pulse={isPlaying}
-      icon={<Play className={cn(
-        size === 'sm' ? 'h-3 w-3' : size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'
-      )} />}
+      icon={isPlaying ? 
+        <Pause className={cn(
+          size === 'sm' ? 'h-3 w-3' : size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'
+        )} /> :
+        <Play className={cn(
+          size === 'sm' ? 'h-3 w-3' : size === 'lg' ? 'h-5 w-5' : 'h-4 w-4'
+        )} />
+      }
     />
   )
 

@@ -1,16 +1,58 @@
 'use client'
 
 import Link from 'next/link'
+import { useState, useRef, useEffect } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { usePlaylists } from '@/hooks/use-playlists'
+import { useSpotifyPlayer } from '@/hooks/use-spotify-player'
 import { NeonButton } from '@/components/ui/neon-button'
 import { PlaylistCard } from '@/components/ui/playlist-card'
 import { GlassCard } from '@/components/ui/glass-card'
+import { AIDJDemo } from '@/components/ui/ai-dj-demo'
+import { SpotifyPlayer } from '@/components/ui/spotify-player'
 import { LogOut, User, Music, RefreshCw, Loader2 } from 'lucide-react'
 
 export default function HomePage() {
   const { user, isAuthenticated, isLoading, login, logout } = useAuth()
   const { playlists, isLoading: playlistsLoading, error: playlistsError, hasPlaylists, refetchPlaylists } = usePlaylists()
+  const playerState = useSpotifyPlayer()
+  const { 
+    play, 
+    deviceId, 
+    isReady: playerReady,
+    isActive: playerActive,
+    connect 
+  } = playerState
+  
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
+  const playerRef = useRef<HTMLDivElement>(null)
+  
+  // Handle playlist play
+  const handlePlaylistPlay = async (playlist: any) => {
+    console.log('🎵 Selected playlist:', playlist.name)
+    setSelectedPlaylistId(playlist.id)
+    
+    // Scroll to player
+    if (playerRef.current) {
+      playerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+    
+    // Only attempt to play if device is ready
+    if (deviceId) {
+      const playlistUri = `spotify:playlist:${playlist.id}`
+      console.log('▶️ Starting playback for:', playlistUri)
+      
+      try {
+        await play(playlistUri)
+        console.log('✅ Playback started successfully')
+      } catch (error) {
+        console.error('❌ Failed to start playback:', error)
+      }
+    } else {
+      console.log('⚠️ Player not ready. Please connect first using the player controls below.')
+    }
+  }
+  
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -112,7 +154,7 @@ export default function HomePage() {
 
           {/* Playlists Section - Only show when authenticated */}
           {isAuthenticated && (
-            <div className="mt-16 w-full max-w-6xl">
+            <div className="mt-16 w-full max-w-6xl mx-auto">
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-3xl font-bold font-orbitron text-neon-white">
                   Your Playlists
@@ -176,7 +218,7 @@ export default function HomePage() {
                       <PlaylistCard
                         key={playlist.id}
                         playlist={playlist}
-                        onPlay={() => console.log('Selected playlist:', playlist.name)}
+                        onPlay={handlePlaylistPlay}
                       />
                     )
                   })}
@@ -197,6 +239,71 @@ export default function HomePage() {
                   </NeonButton>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Spotify Player Section - Only show when authenticated */}
+          {isAuthenticated && (
+            <div ref={playerRef} className="mt-16 w-full max-w-2xl mx-auto">
+              <h2 className="text-2xl font-bold font-orbitron text-neon-white mb-6 text-center">
+                {selectedPlaylistId ? (
+                  <span className="text-glow-purple">
+                    Now Playing: {playlists.find(p => p.id === selectedPlaylistId)?.name}
+                  </span>
+                ) : (
+                  'Spotify Web Player'
+                )}
+              </h2>
+              <SpotifyPlayer className="mb-8 mx-auto" playerState={playerState} />
+              <div className="text-center text-muted-gray text-sm">
+                {!selectedPlaylistId && (
+                  <>
+                    <p>Click the play button on any playlist above to start playing!</p>
+                    <p className="mt-2">Make sure you have Spotify Premium for full functionality.</p>
+                  </>
+                )}
+                {playerActive && selectedPlaylistId && (
+                  <div className="mt-4 p-3 bg-acid-green/10 border border-acid-green/30 rounded-lg">
+                    <p className="text-acid-green font-medium">🎵 Playlist is playing!</p>
+                    <p className="text-xs mt-1 text-muted-gray">
+                      Use the controls above or your Spotify app to manage playback
+                    </p>
+                  </div>
+                )}
+                {!playerActive && deviceId && (
+                  <div className="mt-4 p-3 bg-neon-purple/10 border border-neon-purple/30 rounded-lg">
+                    <p className="text-neon-purple font-medium">📱 Tips:</p>
+                    <div className="text-xs mt-2 space-y-1 text-left">
+                      <p>• Click a playlist's play button to start playing</p>
+                      <p>• The player will automatically connect and start</p>
+                      <p>• You can also control from your Spotify app</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* AI DJ Demo Section - Only show when authenticated */}
+          {isAuthenticated && (
+            <div className="mt-16 w-full max-w-6xl">
+              <AIDJDemo 
+                playlists={playlists.map(p => ({
+                  id: p.id,
+                  name: p.name,
+                  artists: [{ id: 'unknown', name: p.owner.display_name }],
+                  album: {
+                    id: 'unknown',
+                    name: p.name,
+                    images: p.images,
+                    release_date: '2024-01-01'
+                  },
+                  duration_ms: 180000, // Default 3 minutes
+                  preview_url: null,
+                  external_urls: { spotify: `https://open.spotify.com/playlist/${p.id}` },
+                  popularity: 50
+                }))} 
+              />
             </div>
           )}
 

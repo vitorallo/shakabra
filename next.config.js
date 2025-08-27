@@ -57,6 +57,14 @@ const nextConfig = {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
           },
+          {
+            key: 'Permissions-Policy',
+            value: 'unload=(), accelerometer=(), camera=(), display-capture=(), encrypted-media=(self "https://sdk.scdn.co"), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), usb=(), web-share=(), xr-spatial-tracking=()',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://sdk.scdn.co; connect-src 'self' https://api.spotify.com https://accounts.spotify.com wss://dealer.spotify.com https://spclient.wg.spotify.com; media-src 'self' https://*.scdn.co https://*.spotifycdn.com blob: data:; img-src 'self' https://*.scdn.co https://*.spotifycdn.com data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; worker-src 'self' blob:; frame-src https://sdk.scdn.co; child-src https://sdk.scdn.co blob:;",
+          },
         ],
       },
     ]

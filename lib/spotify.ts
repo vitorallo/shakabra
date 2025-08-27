@@ -63,6 +63,7 @@ export interface SpotifyAudioFeatures {
   valence: number
   tempo: number
   time_signature: number
+  duration_ms: number  // Add missing duration property for compatibility
 }
 
 export interface PlaybackState {
