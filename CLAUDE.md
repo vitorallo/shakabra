@@ -13,6 +13,7 @@ This is the AI DJ Party Player project - a **modern web application** that autom
 ## Web App Architecture
 
 **Tech Stack:**
+
 - **Frontend**: Next.js 15 + React + TypeScript + Tailwind CSS
 - **Backend**: Next.js API Routes (serverless)
 - **Authentication**: NextAuth.js with Spotify OAuth
@@ -24,6 +25,7 @@ This is the AI DJ Party Player project - a **modern web application** that autom
 - **Build Tool**: Next.js (Vite under the hood)
 
 **Project Structure:**
+
 ```
 app/
 ├── layout.tsx           # Root layout with metadata
@@ -98,6 +100,7 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
 ## Spotify Integration Requirements (Web-Optimized)
 
 **Authentication (MUCH SIMPLER FOR WEB):**
+
 - Use NextAuth.js Spotify provider (handles OAuth automatically)
 - Standard web redirect URI: `https://yourdomain.com/api/auth/callback/spotify`
 - For local dev: `http://localhost:3000/api/auth/callback/spotify`
@@ -106,30 +109,35 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
 - **IMPORTANT**: Player control APIs require Spotify Premium subscription
 
 **Spotify Web Playback SDK Integration (Web-Native):**
+
 ```javascript
 // Load in browser - much cleaner than Electron
 window.onSpotifyWebPlaybackSDKReady = () => {
-  const token = session.accessToken;
+  const token = session.accessToken
   const player = new Spotify.Player({
     name: 'Shakabra - AI DJ Party Player',
-    getOAuthToken: cb => { cb(token); },
+    getOAuthToken: (cb) => {
+      cb(token)
+    },
     volume: 0.5,
-  });
-  
-  player.connect();
-};
+  })
+
+  player.connect()
+}
 ```
 
 **Latest Spotify Web API Endpoints (2025):**
+
 - **Next.js API Routes** handle all Spotify API calls server-side
 - `/api/spotify/playlists` - GET user playlists
-- `/api/spotify/tracks/[id]` - GET playlist tracks  
+- `/api/spotify/tracks/[id]` - GET playlist tracks
 - `/api/spotify/player/play` - Start/resume playback
 - `/api/spotify/player/pause` - Pause playback
 - `/api/spotify/player/queue` - Add tracks to queue (CRITICAL for DJ mixing)
 - `/api/spotify/audio-features/[ids]` - Track audio analysis (tempo, energy, key, etc.)
 
 **Rate Limiting & Error Handling:**
+
 - Server-side rate limiting with Redis caching
 - Handle 429 responses (rate limiting) with exponential backoff
 - Handle 401 (token expiration) with NextAuth automatic refresh
@@ -150,12 +158,14 @@ window.onSpotifyWebPlaybackSDKReady = () => {
 ## SaaS Business Model
 
 **Free Tier:**
+
 - Limited to 3 playlists
 - 50 tracks per session
 - Basic crossfade (3 seconds max)
 - Basic AI mixing (tempo + energy only)
 
 **Pro Tier ($9.99/month):**
+
 - Unlimited playlists and tracks
 - Advanced crossfade up to 12 seconds
 - Full AI algorithm with all weights
@@ -167,6 +177,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
 ## AI Mixing Algorithm Specifications (Same Logic, Web-Optimized)
 
 **Compatibility Scoring Weights:**
+
 - Tempo compatibility: 30%
 - Energy progression: 25%
 - Key harmony: 20%
@@ -174,6 +185,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
 - Mood flow: 10%
 
 **Web-Optimized Mixing Logic:**
+
 - **Web Workers** for heavy audio analysis processing
 - **IndexedDB** for caching audio features offline
 - **Real-time updates** using WebSockets or Server-Sent Events
@@ -186,6 +198,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
 ## State Management (Zustand) for Web App
 
 **Store Structure:**
+
 - **AuthStore**: NextAuth session integration and user data
 - **PlaylistStore**: playlist data with web caching and feature gates
 - **PlayerStore**: Spotify Web Playback SDK state
@@ -197,6 +210,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
 ## Web App Advantages
 
 **Technical Benefits:**
+
 - **Simpler OAuth**: Standard web redirect
 - **Better Performance**: Native web technologies, no Electron overhead
 - **Instant Updates**: No app distribution, immediate feature deployment
@@ -205,6 +219,7 @@ window.onSpotifyWebPlaybackSDKReady = () => {
 - **Real-time Features**: WebSockets, WebRTC for collaboration
 
 **Business Benefits:**
+
 - **SaaS Ready**: Built-in subscription management and analytics
 - **Global Reach**: Instantly accessible worldwide
 - **SEO/Discovery**: Search engine indexable, better marketing
@@ -222,7 +237,8 @@ window.onSpotifyWebPlaybackSDKReady = () => {
 - **Mobile/tablet responsive** layout problems
 
 ## Documentation
-- query context7 when needed 
+
+- query context7 when needed
 - store fetched documentation for later use in /doc folder with .md format
 
 ## Design Guidelines (Web-Optimized)
@@ -244,6 +260,7 @@ Use the **SHAKABRA_TASKLIST.md** for detailed implementation phases. Current sta
 **🚧 Phase 1 Remaining**: Spotify authentication setup (tasks 1.4-1.9)
 
 **Next Steps**:
+
 1. Implement NextAuth.js with Spotify provider
 2. Set up basic authentication UI
 3. Create responsive web app layout
@@ -253,6 +270,7 @@ Use the **SHAKABRA_TASKLIST.md** for detailed implementation phases. Current sta
 ## Key Web Technologies
 
 **Modern Web APIs Used:**
+
 - **Spotify Web Playback SDK** - Direct browser audio control
 - **Web Audio API** - Real-time audio analysis and visualization
 - **IndexedDB** - Offline caching of audio features

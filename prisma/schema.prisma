@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id            String @id @default(cuid())
+  spotifyId     String @unique
+  email         String @unique
+  name          String?
+  subscription  String @default("free")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  playlists     Playlist[]
+  sessions      DJSession[]
+
+  @@map("users")
+}
+
+// Playlist model
+model Playlist {
+  id          String @id @default(cuid())
+  spotifyId   String @unique
+  name        String
+  description String?
+  imageUrl    String?
+  trackCount  Int @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tracks      Track[]
+
+  @@map("playlists")
+}
+
+// Track model
+model Track {
+  id            String @id @default(cuid())
+  spotifyId     String @unique
+  name          String
+  artist        String
+  album         String?
+  imageUrl      String?
+  duration      Int
+  previewUrl    String?
+  tempo         Float?
+  energy        Float?
+  valence       Float?
+  key           Int?
+  createdAt     DateTime @default(now())
+
+  // Relations
+  playlists     Playlist[]
+
+  @@map("tracks")
+}
+
+// DJ Session model
+model DJSession {
+  id            String @id @default(cuid())
+  name          String
+  isActive      Boolean @default(false)
+  partyMode     String @default("peak_time")
+  crossfadeDuration Int @default(3)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  userId        String
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("dj_sessions")
+}

@@ -3,9 +3,11 @@
 ## 🎯 Product Vision
 
 ### Mission Statement
+
 Create the world's first AI-powered DJ web application that automatically mixes Spotify playlists with professional-grade transitions, making every party legendary through intelligent music curation.
 
 ### Target Market
+
 - **Primary**: Party hosts, event planners, small venue owners
 - **Secondary**: Amateur DJs, music enthusiasts, social media content creators
 - **Tertiary**: Professional DJs seeking AI assistance
@@ -13,6 +15,7 @@ Create the world's first AI-powered DJ web application that automatically mixes 
 ## 🏗️ Technical Architecture
 
 ### Stack Selection
+
 ```
 Frontend: Next.js 14 + React + TypeScript
 Styling: Tailwind CSS + Framer Motion (shadcn if needed)
@@ -26,6 +29,7 @@ Payments: stripe
 ```
 
 ### Infrastructure
+
 - **Hosting**: Vercel for automatic scaling
 - **Database**: Supabase for PostgreSQL + real-time features
 - **CDN**: Vercel Edge Network for global performance
@@ -37,8 +41,9 @@ Payments: stripe
 ### Pricing Tiers
 
 #### 🆓 **Free Tier** - "Party Starter"
+
 - **Price**: $0/month
-- **Limits**: 
+- **Limits**:
   - 2 AI DJ sessions per month (max 1 hour each)
   - Access to 1 playlists
   - Basic mixing algorithm
@@ -50,9 +55,10 @@ Payments: stripe
   - Simple crossfade transitions
   - Mobile-responsive interface
 
-#### 💎 **Pro Tier** - "Party Legend" 
+#### 💎 **Pro Tier** - "Party Legend"
+
 - **Price**: $9.99/month or $99/year (1 months free)
-- **Limits**: 
+- **Limits**:
   - Unlimited AI DJ sessions
   - Unlimited playlists
   - Advanced mixing algorithms
@@ -70,18 +76,21 @@ Payments: stripe
   - ambiend mood selection based on predefined list: see enum Partymode
 
 ### Revenue Projections (Year 1)
+
 - **Month 6**: 1,000 users (850 Free, 140 Pro) = ~$2,000 MRR
 - **Month 12**: 5,000 users (3,500 Free, 1,400 Pro) = ~$19,000 MRR
 
 ## 🎨 UI/UX Design System
 
 ### Design Philosophy
+
 - **Dark-first**: Optimized for party/club environments
 - **Neon aesthetics**: Electric blues, purples, and accent colors
 - **Minimalist**: Clean interface that doesn't distract from music
 - **Touch-friendly**: Large buttons for mobile/tablet use
 
 ### Color Palette
+
 ```css
 Primary Colors:
 --electric-blue: #00D9FF
@@ -102,12 +111,14 @@ Text Colors:
 ```
 
 ### Typography
+
 - **Headers**: Inter Bold for modern tech feel
 - **Body**: Inter Regular for excellent readability
 - **Accent**: Orbitron for futuristic elements
 - **Code**: JetBrains Mono for technical displays
 
 ### Component Library
+
 - **Glassmorphism cards** for content containers
 - **Neon glow effects** for active states
 - **Smooth animations** with Framer Motion
@@ -117,8 +128,9 @@ Text Colors:
 ## 🚀 Core Features
 
 ### 1. Authentication & Onboarding
+
 - **Spotify OAuth Integration**: Seamless login with required scopes
-- **Freemium Onboarding**: 
+- **Freemium Onboarding**:
   - Welcome tutorial with interactive demo
   - Tier selection with clear value props
   - First mix setup wizard
@@ -127,18 +139,20 @@ Text Colors:
 ### 2. AI DJ Engine
 
 #### Smart Playlist Analysis
+
 ```typescript
 interface PlaylistAnalysis {
-  totalTracks: number;
-  averageTempo: number;
-  energyDistribution: EnergyLevel[];
-  genreBreakdown: GenreStats[];
-  moodProgression: MoodAnalysis;
-  mixabilityScore: number; // 0-100
+  totalTracks: number
+  averageTempo: number
+  energyDistribution: EnergyLevel[]
+  genreBreakdown: GenreStats[]
+  moodProgression: MoodAnalysis
+  mixabilityScore: number // 0-100
 }
 ```
 
 #### Advanced Mixing Algorithm
+
 - **Tempo Matching**: BPM synchronization within ±3% tolerance
 - **Harmonic Mixing**: Key compatibility using Camelot Wheel
 - **Energy Management**: Intelligent energy curve progression
@@ -146,13 +160,15 @@ interface PlaylistAnalysis {
 - **Genre Blending**: Smart cross-genre mixing when appropriate
 
 #### Party Modes
+
 ```typescript
 enum PartyMode {
-  WARM_UP = "warm_up",     // Gradual energy build (60-90 BPM)
-  PEAK_TIME = "peak_time", // High energy maintenance (120-130 BPM)
-  COOL_DOWN = "cool_down", // Gentle wind-down (80-100 BPM)
-  ECLECTIC = "eclectic",   
-  ROCK = "rock",
-  LATINO = "latino",
-  VINTAGE = "vintage"
+  WARM_UP = 'warm_up', // Gradual energy build (60-90 BPM)
+  PEAK_TIME = 'peak_time', // High energy maintenance (120-130 BPM)
+  COOL_DOWN = 'cool_down', // Gentle wind-down (80-100 BPM)
+  ECLECTIC = 'eclectic',
+  ROCK = 'rock',
+  LATINO = 'latino',
+  VINTAGE = 'vintage',
 }
+```
